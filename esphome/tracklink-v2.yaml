@@ -3,7 +3,10 @@
 # Hardware: ESP32-S3 (Lolin S3 Mini)
 
 substitutions:
+  # Add a unique name for this locomotive (e.g., locomotive-bnsf-1234, locomotive-up-5678)
+  # Use lowercase letters, numbers, and hyphens only - no spaces
   name: dragon-locomotive
+  # Friendly name shown in Home Assistant (e.g., "BNSF SD40-2 #1234")
   friendly_name: "Dragon Locomotive"
   # Locomotive-specific settings
   min_motor_power: "50"  # Minimum PWM % for motor to move
