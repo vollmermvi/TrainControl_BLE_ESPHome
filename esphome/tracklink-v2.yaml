@@ -1,0 +1,335 @@
+# Dragon Railway - TrackLink V2 ESPHome Configuration
+# Converted from RemoteXY BLE to ESPHome/Home Assistant
+# Hardware: ESP32-S3 (Lolin S3 Mini)
+
+substitutions:
+  name: dragon-locomotive
+  friendly_name: "Dragon Locomotive"
+  # Locomotive-specific settings
+  min_motor_power: "50"  # Minimum PWM % for motor to move
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - output.turn_on: power_enable
+      - light.turn_off: headlight
+      - light.turn_off: taillight
+      - logger.log: "Dragon Railway Locomotive Ready"
+
+esp32:
+  board: lolin_s3_mini
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${name}-fallback"
+    password: !secret ap_password
+
+captive_portal:
+
+# ============================================
+# PIN DEFINITIONS - TrackLink V2
+# ============================================
+# Motor: DRV_MA1=6, DRV_MA2=7, DRV_EN=5
+# LEDs: L1=9, L2=10, L3=11, L4=12, L5=13, L6=14
+# Audio: LRCLK=15, BCLK=16, DIN=17, SD_MODE=18
+# Power: VSENS=4, PWR_EN=21
+
+# ============================================
+# OUTPUTS
+# ============================================
+
+output:
+  # Power enable - keeps board powered on
+  - platform: gpio
+    pin: 21
+    id: power_enable
+
+  # Motor driver enable
+  - platform: gpio
+    pin: 5
+    id: motor_enable
+
+  # Motor PWM outputs
+  - platform: ledc
+    pin: 6
+    id: motor_pwm_1
+    frequency: 24000Hz
+
+  - platform: ledc
+    pin: 7
+    id: motor_pwm_2
+    frequency: 24000Hz
+
+  # LED outputs (PWM for fade effects)
+  - platform: ledc
+    pin: 9
+    id: led_headlight
+    frequency: 8000Hz
+
+  - platform: ledc
+    pin: 10
+    id: led_taillight
+    frequency: 8000Hz
+
+  - platform: ledc
+    pin: 11
+    id: led_cablight
+    frequency: 8000Hz
+
+  - platform: ledc
+    pin: 12
+    id: led_walklight
+    frequency: 8000Hz
+
+  - platform: ledc
+    pin: 13
+    id: led_ditch1
+    frequency: 8000Hz
+
+  - platform: ledc
+    pin: 14
+    id: led_ditch2
+    frequency: 8000Hz
+
+  # Audio amplifier enable (MAX98357 SD_MODE)
+  - platform: gpio
+    pin: 18
+    id: audio_enable
+
+# ============================================
+# MOTOR CONTROL (via Fan component for speed control)
+# ============================================
+
+fan:
+  - platform: speed
+    name: "Motor"
+    id: locomotive_motor
+    output: motor_pwm_1
+    direction_output: motor_pwm_2
+    on_turn_on:
+      - output.turn_on: motor_enable
+    on_turn_off:
+      - output.turn_off: motor_enable
+
+# ============================================
+# LIGHTS (with fade transitions)
+# ============================================
+
+light:
+  - platform: monochromatic
+    name: "Headlight"
+    id: headlight
+    output: led_headlight
+    default_transition_length: 500ms
+    gamma_correct: 1.0
+
+  - platform: monochromatic
+    name: "Taillight"
+    id: taillight
+    output: led_taillight
+    default_transition_length: 500ms
+    gamma_correct: 1.0
+
+  - platform: monochromatic
+    name: "Cab Light"
+    id: cablight
+    output: led_cablight
+    default_transition_length: 500ms
+    gamma_correct: 1.0
+
+  - platform: monochromatic
+    name: "Walk Light"
+    id: walklight
+    output: led_walklight
+    default_transition_length: 500ms
+    gamma_correct: 1.0
+
+  # Ditch lights with alternating flash effect
+  - platform: monochromatic
+    name: "Ditch Light Left"
+    id: ditch_left
+    output: led_ditch1
+    effects:
+      - pulse:
+          name: "Alternating"
+          transition_length: 200ms
+          update_interval: 400ms
+
+  - platform: monochromatic
+    name: "Ditch Light Right"
+    id: ditch_right
+    output: led_ditch2
+    effects:
+      - pulse:
+          name: "Alternating"
+          transition_length: 200ms
+          update_interval: 400ms
+
+# ============================================
+# SENSORS
+# ============================================
+
+sensor:
+  # Battery voltage monitoring
+  - platform: adc
+    pin: 4
+    name: "Battery Voltage"
+    id: battery_voltage
+    update_interval: 10s
+    attenuation: 11db
+    filters:
+      - multiply: 1.8  # VSCALE
+      - offset: -0.2   # VOFFSET
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    device_class: voltage
+
+  # Battery percentage (assuming 1S LiPo: 3.0V = 0%, 4.2V = 100%)
+  - platform: template
+    name: "Battery Level"
+    id: battery_level
+    unit_of_measurement: "%"
+    device_class: battery
+    lambda: |-
+      float voltage = id(battery_voltage).state;
+      float percentage = (voltage - 3.0) / (4.2 - 3.0) * 100.0;
+      if (percentage > 100) percentage = 100;
+      if (percentage < 0) percentage = 0;
+      return percentage;
+    update_interval: 10s
+
+  # WiFi signal strength
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# ============================================
+# BINARY SENSORS
+# ============================================
+
+binary_sensor:
+  # Power button
+  - platform: gpio
+    pin:
+      number: 38
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Power Button"
+    id: power_button
+
+  # Charging detection
+  - platform: gpio
+    pin:
+      number: 48
+      mode: INPUT
+    name: "Charging"
+    id: charging_status
+
+# ============================================
+# I2S AUDIO (MAX98357)
+# ============================================
+
+i2s_audio:
+  i2s_lrclk_pin: 15
+  i2s_bclk_pin: 16
+
+speaker:
+  - platform: i2s_audio
+    dac_type: external
+    i2s_dout_pin: 17
+    id: train_speaker
+    mode: mono
+
+# ============================================
+# MEDIA PLAYER (for Home Assistant control)
+# ============================================
+
+media_player:
+  - platform: i2s_audio
+    name: "Train Speaker"
+    id: train_media_player
+    dac_type: external
+    i2s_dout_pin: 17
+    mode: mono
+    on_play:
+      - output.turn_on: audio_enable
+    on_pause:
+      - output.turn_off: audio_enable
+    on_idle:
+      - output.turn_off: audio_enable
+
+# ============================================
+# SCRIPTS (for automation convenience)
+# ============================================
+
+script:
+  # All lights on
+  - id: lights_on
+    then:
+      - light.turn_on: headlight
+      - light.turn_on: taillight
+      - light.turn_on: cablight
+      - light.turn_on: walklight
+
+  # All lights off
+  - id: lights_off
+    then:
+      - light.turn_off: headlight
+      - light.turn_off: taillight
+      - light.turn_off: cablight
+      - light.turn_off: walklight
+      - light.turn_off: ditch_left
+      - light.turn_off: ditch_right
+
+  # Emergency stop
+  - id: emergency_stop
+    then:
+      - fan.turn_off: locomotive_motor
+      - output.turn_off: motor_enable
+      - logger.log: "EMERGENCY STOP"
+
+# ============================================
+# BUTTONS (for HA dashboard)
+# ============================================
+
+button:
+  - platform: template
+    name: "Emergency Stop"
+    icon: "mdi:alert-octagon"
+    on_press:
+      - script.execute: emergency_stop
+
+  - platform: template
+    name: "All Lights On"
+    icon: "mdi:lightbulb-group"
+    on_press:
+      - script.execute: lights_on
+
+  - platform: template
+    name: "All Lights Off"
+    icon: "mdi:lightbulb-group-off"
+    on_press:
+      - script.execute: lights_off
+
+  - platform: restart
+    name: "Restart"

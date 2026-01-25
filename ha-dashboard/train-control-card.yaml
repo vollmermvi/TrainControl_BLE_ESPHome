@@ -1,0 +1,119 @@
+# Dragon Railway - Home Assistant Dashboard Card
+# Add this to your Lovelace dashboard via raw YAML editor
+# Replace 'dragon_locomotive' with your device name if different
+
+type: vertical-stack
+cards:
+  # Header
+  - type: markdown
+    content: "# Dragon Railway"
+
+  # Motor Control
+  - type: horizontal-stack
+    cards:
+      - type: custom:mushroom-fan-card
+        entity: fan.dragon_locomotive_motor
+        name: Locomotive Motor
+        icon_animation: true
+        show_percentage_control: true
+        collapsible_controls: false
+        fill_container: true
+
+  # Emergency Stop
+  - type: button
+    entity: button.dragon_locomotive_emergency_stop
+    name: EMERGENCY STOP
+    icon: mdi:alert-octagon
+    tap_action:
+      action: call-service
+      service: button.press
+      target:
+        entity_id: button.dragon_locomotive_emergency_stop
+    hold_action:
+      action: none
+    card_mod:
+      style: |
+        ha-card {
+          background-color: #b71c1c;
+          color: white;
+        }
+
+  # Lights
+  - type: entities
+    title: Lights
+    show_header_toggle: true
+    entities:
+      - entity: light.dragon_locomotive_headlight
+        name: Headlight
+        icon: mdi:car-light-high
+      - entity: light.dragon_locomotive_taillight
+        name: Taillight
+        icon: mdi:car-light-dimmed
+      - entity: light.dragon_locomotive_cab_light
+        name: Cab Light
+        icon: mdi:ceiling-light
+      - entity: light.dragon_locomotive_walk_light
+        name: Walk Light
+        icon: mdi:wall-sconce-flat
+      - entity: light.dragon_locomotive_ditch_light_left
+        name: Ditch Light L
+        icon: mdi:light-flood-down
+      - entity: light.dragon_locomotive_ditch_light_right
+        name: Ditch Light R
+        icon: mdi:light-flood-down
+
+  # Quick Actions
+  - type: horizontal-stack
+    cards:
+      - type: button
+        entity: button.dragon_locomotive_all_lights_on
+        name: All On
+        icon: mdi:lightbulb-group
+        tap_action:
+          action: call-service
+          service: button.press
+          target:
+            entity_id: button.dragon_locomotive_all_lights_on
+      - type: button
+        entity: button.dragon_locomotive_all_lights_off
+        name: All Off
+        icon: mdi:lightbulb-group-off
+        tap_action:
+          action: call-service
+          service: button.press
+          target:
+            entity_id: button.dragon_locomotive_all_lights_off
+
+  # Audio Player
+  - type: media-control
+    entity: media_player.dragon_locomotive_train_speaker
+
+  # Status
+  - type: entities
+    title: Status
+    entities:
+      - entity: sensor.dragon_locomotive_battery_voltage
+        name: Battery Voltage
+        icon: mdi:battery
+      - entity: sensor.dragon_locomotive_battery_level
+        name: Battery Level
+        icon: mdi:battery-medium
+      - entity: binary_sensor.dragon_locomotive_charging
+        name: Charging
+        icon: mdi:battery-charging
+      - entity: sensor.dragon_locomotive_wifi_signal
+        name: WiFi Signal
+        icon: mdi:wifi
+
+  # System
+  - type: horizontal-stack
+    cards:
+      - type: button
+        entity: button.dragon_locomotive_restart
+        name: Restart
+        icon: mdi:restart
+        tap_action:
+          action: call-service
+          service: button.press
+          target:
+            entity_id: button.dragon_locomotive_restart
