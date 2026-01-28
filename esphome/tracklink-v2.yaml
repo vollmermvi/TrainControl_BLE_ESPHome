@@ -14,6 +14,12 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  platformio_options:
+    build_flags:
+      - -DARDUINO_USB_CDC_ON_BOOT=1
+      - -DARDUINO_USB_MODE=1
+      - -DUSE_ESP32_VARIANT_ESP32S3
+      - -Wno-deprecated-declarations
   on_boot:
     priority: -100
     then:
@@ -24,6 +30,7 @@ esphome:
 
 esp32:
   board: lolin_s3_mini
+  variant: esp32s3
   framework:
     type: arduino
 
@@ -199,7 +206,7 @@ sensor:
     name: "Battery Voltage"
     id: battery_voltage
     update_interval: 10s
-    attenuation: 11db
+    attenuation: 12db
     filters:
       - multiply: 1.8  # VSCALE
       - offset: -0.2   # VOFFSET
@@ -255,13 +262,6 @@ binary_sensor:
 i2s_audio:
   i2s_lrclk_pin: 15
   i2s_bclk_pin: 16
-
-speaker:
-  - platform: i2s_audio
-    dac_type: external
-    i2s_dout_pin: 17
-    id: train_speaker
-    mode: mono
 
 # ============================================
 # MEDIA PLAYER (for Home Assistant control)
