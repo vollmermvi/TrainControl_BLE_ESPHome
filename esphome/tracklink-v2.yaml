@@ -56,6 +56,10 @@ wifi:
 
 captive_portal:
 
+# Enable web server for status page
+web_server:
+  port: 80
+
 # ============================================
 # PIN DEFINITIONS - TrackLink V2
 # ============================================
