@@ -20,6 +20,7 @@ esphome:
       - -DARDUINO_USB_MODE=1
       - -DUSE_ESP32_VARIANT_ESP32S3
       - -Wno-deprecated-declarations
+      - -Wno-cpp
   on_boot:
     priority: -100
     then:
@@ -34,9 +35,10 @@ esp32:
   framework:
     type: arduino
 
-# Enable logging
+# Enable logging (USB serial on ESP32-S3)
 logger:
   level: INFO
+  hardware_uart: USB_CDC
 
 # Enable Home Assistant API
 api:
